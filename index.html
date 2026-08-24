@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Server</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    background: #313338;
+    color: #dbdee1;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ---------- Login screen ---------- */
+  #login-screen {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #313338;
+  }
+  #login-box {
+    background: #2b2d31;
+    padding: 32px;
+    border-radius: 8px;
+    width: 320px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  #login-box h1 { font-size: 20px; margin-bottom: 8px; color: #fff; }
+  #login-box p { font-size: 13px; color: #949ba4; margin-bottom: 16px; }
+  #username-input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 4px;
+    border: none;
+    background: #1e1f22;
+    color: #dbdee1;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+  #join-btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    background: #5865f2;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  #join-btn:hover { background: #4752c4; }
+  #login-status { font-size: 12px; color: #f23f42; margin-top: 8px; min-height: 16px; }
+
+  /* ---------- Chat screen ---------- */
+  #chat-screen {
+    display: none;
+    flex-direction: column;
+    height: 100vh;
+  }
+  header {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    background: #313338;
+    border-bottom: 1px solid #26272b;
+    box-shadow: 0 1px 0 rgba(0,0,0,.2);
+    flex-shrink: 0;
+  }
+  header .channel-icon { color: #949ba4; margin-right: 6px; font-weight: 700; }
+  header h2 { font-size: 16px; color: #fff; font-weight: 600; }
+  header .who { margin-left: auto; font-size: 12px; color: #949ba4; }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 16px 8px 16px;
+    display: flex;
+    flex-direction: column;
+  }
+  .msg {
+    display: flex;
+    padding: 6px 8px;
+    border-radius: 6px;
+    margin-bottom: 2px;
+    position: relative;
+  }
+  .msg:hover { background: #2e3035; }
+  .msg:hover .del-btn { display: inline-block; }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #5865f2;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+  .msg-body { flex: 1; min-width: 0; }
+  .msg-head { display: flex; align-items: baseline; gap: 8px; }
+  .msg-author { font-weight: 600; color: #fff; font-size: 15px; }
+  .msg-time { font-size: 11px; color: #949ba4; }
+  .msg-text { font-size: 15px; line-height: 1.375; word-wrap: break-word; white-space: pre-wrap; }
+  .del-btn {
+    display: none;
+    position: absolute;
+    right: 8px;
+    top: 4px;
+    background: #2b2d31;
+    border: 1px solid #3f4147;
+    color: #f23f42;
+    border-radius: 4px;
+    font-size: 11px;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+  .del-btn:hover { background: #3f2124; }
+  .system-note {
+    text-align: center;
+    color: #949ba4;
+    font-size: 12px;
+    margin: 8px 0;
+  }
+
+  #compose-area { padding: 0 16px 20px 16px; flex-shrink: 0; }
+  #message-form {
+    background: #383a40;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+  }
+  #message-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #dbdee1;
+    padding: 12px 4px;
+    font-size: 15px;
+  }
+  #message-input::placeholder { color: #6d6f78; }
+  #send-btn {
+    background: none;
+    border: none;
+    color: #949ba4;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 4px;
+  }
+  #send-btn:hover { color: #dbdee1; }
+
+  #connection-banner {
+    display: none;
+    text-align: center;
+    font-size: 12px;
+    padding: 6px;
+    background: #f23f42;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ================= LOGIN SCREEN ================= -->
+  <div id="login-screen">
+    <div id="login-box">
+      <h1>Join the Server</h1>
+      <p>Pick a display name to enter #general</p>
+      <input id="username-input" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
+      <button id="join-btn">Join Server</button>
+      <div id="login-status"></div>
+    </div>
+  </div>
+
+  <!-- ================= CHAT SCREEN ================= -->
+  <div id="chat-screen">
+    <div id="connection-banner">Connecting...</div>
+    <header>
+      <span class="channel-icon">#</span>
+      <h2>general</h2>
+      <span class="who" id="who-label"></span>
+    </header>
+    <div id="messages"></div>
+    <div id="compose-area">
+      <form id="message-form">
+        <input id="message-input" type="text" placeholder="Message #general" maxlength="2000" autocomplete="off">
+        <button type="submit" id="send-btn">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= FIREBASE ================= -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" onerror="window.__fbLoadFailed=true"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" onerror="window.__fbLoadFailed=true"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" onerror="window.__fbLoadFailed=true"></script>
+
+  <script>
+    // =====================================================================
+    // 1) PASTE YOUR FIREBASE CONFIG HERE
+    //    Firebase Console -> Project Settings -> General -> Your apps -> SDK setup
+    // =====================================================================
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const loginStatusEl = document.getElementById("login-status");
+
+    // If the Firebase SDK scripts above failed to load (blocked by an
+    // ad-blocker/extension, no internet connection, or the CDN was
+    // unreachable), stop here with a visible message instead of throwing
+    // a silent "firebase is not defined" console error.
+    if (window.__fbLoadFailed || typeof firebase === "undefined") {
+      loginStatusEl.textContent =
+        "Couldn't load Firebase from the CDN. Disable any ad-blocker/" +
+        "privacy extension for this page, check your internet connection, " +
+        "then reload.";
+      throw new Error("Firebase SDK failed to load from gstatic.com");
+    }
+
+    if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+      loginStatusEl.textContent =
+        "Firebase isn't configured yet — paste your project's firebaseConfig " +
+        "into the script near the top of index.html.";
+      throw new Error("firebaseConfig has not been filled in");
+    }
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const messagesRef = db.collection("messages");
+
+    let currentUid = null;
+    let username = localStorage.getItem("chat_username") || "";
+
+    const loginScreen = document.getElementById("login-screen");
+    const chatScreen = document.getElementById("chat-screen");
+    const usernameInput = document.getElementById("username-input");
+    const joinBtn = document.getElementById("join-btn");
+    const loginStatus = document.getElementById("login-status");
+    const messagesEl = document.getElementById("messages");
+    const messageForm = document.getElementById("message-form");
+    const messageInput = document.getElementById("message-input");
+    const whoLabel = document.getElementById("who-label");
+    const banner = document.getElementById("connection-banner");
+
+    if (username) usernameInput.value = username;
+
+    // ---------------- Auth ----------------
+    banner.style.display = "block";
+    auth.signInAnonymously().catch(err => {
+      loginStatus.textContent = "Connection error: " + err.message;
+    });
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUid = user.uid;
+        banner.style.display = "none";
+        if (username) enterChat();
+      }
+    });
+
+    joinBtn.addEventListener("click", () => {
+      const val = usernameInput.value.trim();
+      if (!val) {
+        loginStatus.textContent = "Please enter a name.";
+        return;
+      }
+      if (!currentUid) {
+        loginStatus.textContent = "Still connecting, try again in a moment...";
+        return;
+      }
+      username = val;
+      localStorage.setItem("chat_username", val);
+      enterChat();
+    });
+
+    usernameInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") joinBtn.click();
+    });
+
+    // ---------------- Enter chat ----------------
+    let unsubscribe = null;
+    function enterChat() {
+      loginScreen.style.display = "none";
+      chatScreen.style.display = "flex";
+      whoLabel.textContent = "Logged in as " + username;
+      messageInput.focus();
+      listenForMessages();
+    }
+
+    // ---------------- Render helpers ----------------
+    function escapeHtml(str) {
+      const d = document.createElement("div");
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function initials(name) {
+      return name.trim().slice(0, 2).toUpperCase();
+    }
+
+    function formatTime(ts) {
+      if (!ts) return "";
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+
+    function renderMessage(doc) {
+      const m = doc.data();
+      const wrap = document.createElement("div");
+      wrap.className = "msg";
+      wrap.dataset.id = doc.id;
+
+      const isOwn = m.uid === currentUid;
+
+      wrap.innerHTML = `
+        <div class="avatar">${escapeHtml(initials(m.username || "?"))}</div>
+        <div class="msg-body">
+          <div class="msg-head">
+            <span class="msg-author">${escapeHtml(m.username || "Unknown")}</span>
+            <span class="msg-time">${formatTime(m.timestamp)}</span>
+          </div>
+          <div class="msg-text"></div>
+        </div>
+        ${isOwn ? '<button class="del-btn">Delete</button>' : ""}
+      `;
+      // set text content safely (preserves line breaks via CSS white-space)
+      wrap.querySelector(".msg-text").textContent = m.text || "";
+
+      if (isOwn) {
+        wrap.querySelector(".del-btn").addEventListener("click", () => {
+          if (confirm("Delete this message?")) {
+            messagesRef.doc(doc.id).delete().catch(err => alert("Couldn't delete: " + err.message));
+          }
+        });
+      }
+      return wrap;
+    }
+
+    // ---------------- Live listener ----------------
+    function listenForMessages() {
+      if (unsubscribe) unsubscribe();
+      unsubscribe = messagesRef
+        .orderBy("timestamp", "asc")
+        .limitToLast(200)
+        .onSnapshot(
+          snapshot => {
+            const nearBottom =
+              messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 120;
+
+            messagesEl.innerHTML = "";
+            if (snapshot.empty) {
+              const note = document.createElement("div");
+              note.className = "system-note";
+              note.textContent = "No messages yet. Say hello!";
+              messagesEl.appendChild(note);
+            } else {
+              snapshot.forEach(doc => messagesEl.appendChild(renderMessage(doc)));
+            }
+
+            if (nearBottom) {
+              messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+          },
+          err => {
+            banner.style.display = "block";
+            banner.textContent = "Connection lost: " + err.message;
+          }
+        );
+    }
+
+    // ---------------- Send message ----------------
+    messageForm.addEventListener("submit", e => {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text || !currentUid) return;
+
+      messageInput.value = "";
+      messagesRef
+        .add({
+          text: text,
+          username: username,
+          uid: currentUid,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .catch(err => {
+          alert("Message failed to send: " + err.message);
+        });
+    });
+  </script>
+</body>
+</html>
